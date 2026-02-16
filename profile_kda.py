@@ -169,6 +169,7 @@ def profile_kda_fwd(
     use_gate_in_kernel=True,
     use_qk_l2norm_in_kernel=True,
     varlen=False,
+    variance=1.0,
     safe_gate=False,
     num_warmup=10,
     num_iters=20,
@@ -185,7 +186,7 @@ def profile_kda_fwd(
 
     # Create input data
     if varlen:
-        seqlens = generate_random_seq_lens(num_seqs=B, total_len=T, min_seq_len=63, variance=10.0, seed=42)
+        seqlens = generate_random_seq_lens(num_seqs=B, total_len=T, min_seq_len=63, variance=variance, seed=42)
         print(seqlens)
         cum_seqlens = exclusive_cumsum(seqlens)
         cu_seqlens = torch.tensor(cum_seqlens, dtype=torch.int64, device=device)
@@ -283,6 +284,7 @@ def profile_kda_fwd_bwd(
     use_gate_in_kernel=True,
     use_qk_l2norm_in_kernel=True,
     varlen=False,
+    variance=1.0,
     safe_gate=True,
     num_warmup=10,
     num_iters=20,
@@ -299,7 +301,7 @@ def profile_kda_fwd_bwd(
 
     # Create input data
     if varlen:
-        seqlens = generate_random_seq_lens(num_seqs=B, total_len=T, min_seq_len=63, variance=1.0, seed=42)
+        seqlens = generate_random_seq_lens(num_seqs=B, total_len=T, min_seq_len=63, variance=variance, seed=42)
         cum_seqlens = exclusive_cumsum(seqlens)
         cu_seqlens = torch.tensor(cum_seqlens, dtype=torch.int64, device=device)
         B = 1 # set B to 1
@@ -369,7 +371,7 @@ def profile_kda_fwd_bwd(
 
         # Export chrome trace
         print("\n--- Exporting Chrome trace ---")
-        output_path = f"kda_fwdbwd_{'varlen_' if varlen else ''}profile_trace.json"
+        output_path = f"kda_fwdbwd{'_varlen_var' + str(variance) if varlen else ''}_profile_trace.json"
         prof.export_chrome_trace(output_path)
         print(f"Trace saved to: {output_path}")
 
@@ -490,6 +492,7 @@ def main():
     parser.add_argument('--K', type=int, default=128, help='Key dimension')
     parser.add_argument('--V', type=int, default=128, help='Value dimension')
     parser.add_argument('--varlen', action='store_true', help='Use variable-length sequences (only supports B=1)')
+    parser.add_argument('--variance', type=float, default=1.0, help='Variance for random sequence length generation (only used if --varlen is set)')
     parser.add_argument('--warmup', type=int, default=10, help='Number of warmup iterations')
     parser.add_argument('--iters', type=int, default=20, help='Number of profiling iterations')
     parser.add_argument('--profiler', action='store_true', help='Use torch.profiler')
@@ -511,6 +514,7 @@ def main():
             profile_kda_fwd(
                 args.B, args.T, args.H, args.K, args.V,
                 varlen=args.varlen,
+                variance=args.variance,
                 num_warmup=args.warmup,
                 num_iters=args.iters,
                 with_profiler=args.profiler,
@@ -520,6 +524,7 @@ def main():
             profile_kda_fwd_bwd(
                 args.B, args.T, args.H, args.K, args.V,
                 varlen=args.varlen,
+                variance=args.variance,
                 num_warmup=args.warmup,
                 num_iters=args.iters,
                 with_profiler=args.profiler,
