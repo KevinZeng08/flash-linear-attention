@@ -344,7 +344,6 @@ def profile_kda_cp_fwd(
         with profile(
             activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
             schedule=schedule(wait=1, warmup=2, active=num_iters),
-            on_trace_ready=tensorboard_trace_handler(trace_dir) if rank == 0 else None,
             record_shapes=True,
             with_stack=True,
         ) as prof:
@@ -355,9 +354,11 @@ def profile_kda_cp_fwd(
 
         torch.cuda.synchronize()
 
-        # Also export chrome trace on rank 0
-        if rank == 0:
-            trace_path = f"kda_cp{cp_size}_tp{tp_size}_fwd{'_varlen_var' + str(variance) if varlen else ''}_trace.json"
+        # Export chrome trace on rank 1
+        # Because in first rank or last rank, 
+        # the preprocess kernel of CP is only called once
+        if rank == 1:
+            trace_path = f"rank_{rank}_kda_cp{cp_size}_tp{tp_size}_fwd{'_varlen_var' + str(variance) if varlen else ''}_trace.json"
             prof.export_chrome_trace(trace_path)
             print(f"Chrome trace saved to: {trace_path}")
 
@@ -533,7 +534,6 @@ def profile_kda_cp_fwd_bwd(
         with profile(
             activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
             schedule=schedule(wait=1, warmup=2, active=num_iters),
-            on_trace_ready=tensorboard_trace_handler(trace_dir) if rank == 0 else None,
             record_shapes=True,
             with_stack=False,
         ) as prof:
@@ -545,8 +545,11 @@ def profile_kda_cp_fwd_bwd(
         torch.cuda.synchronize()
 
         # Export chrome trace on rank 0
-        if rank == 0:
-            trace_path = f"kda_cp{cp_size}_tp{tp_size}_fwdbwd{'_varlen_var' + str(variance) if varlen else ''}_trace.json"
+        # Export chrome trace on rank 1
+        # Because in first rank or last rank, 
+        # the preprocess kernel of CP is only called once
+        if rank == 1:
+            trace_path = f"rank_{rank}_kda_cp{cp_size}_tp{tp_size}_fwdbwd{'_varlen_var' + str(variance) if varlen else ''}_trace.json"
             prof.export_chrome_trace(trace_path)
             print(f"Chrome trace saved to: {trace_path}")
 
