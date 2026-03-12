@@ -344,8 +344,8 @@ def profile_kda_cp_fwd(
         with profile(
             activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
             schedule=schedule(wait=1, warmup=2, active=num_iters),
-            record_shapes=True,
-            with_stack=True,
+            record_shapes=False,
+            with_stack=False,
         ) as prof:
             for _ in range(num_iters + 3):
                 with record_function("chunk_kda_cp_fwd"):
@@ -534,7 +534,7 @@ def profile_kda_cp_fwd_bwd(
         with profile(
             activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
             schedule=schedule(wait=1, warmup=2, active=num_iters),
-            record_shapes=True,
+            record_shapes=False,
             with_stack=False,
         ) as prof:
             for _ in range(num_iters + 3):
@@ -544,7 +544,6 @@ def profile_kda_cp_fwd_bwd(
 
         torch.cuda.synchronize()
 
-        # Export chrome trace on rank 0
         # Export chrome trace on rank 1
         # Because in first rank or last rank, 
         # the preprocess kernel of CP is only called once
